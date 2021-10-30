@@ -14,6 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// 4013  export PSQL_USER=postgres
+// 4014  export PSQL_PASSWORD=password
+// 4015  export PSQL_HOST=54.166.146.81
+// 4016  export PSQL_DBNAME=postgres
+// 4017  export PSQL_PORT=5432
+
 package main
 
 import (

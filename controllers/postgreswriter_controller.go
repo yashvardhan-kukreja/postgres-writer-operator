@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/go-logr/logr"
 	demov1 "github.com/yashvardhan-kukreja/postgres-writer-operator/api/v1"
 	"github.com/yashvardhan-kukreja/postgres-writer-operator/pkg/psql"
 )
@@ -61,7 +62,6 @@ func (r *PostgresWriterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-
 	// if the event is not related to delete, just check if the finalizers are rightfully set on the resource
 	if postgresWriterObject.GetDeletionTimestamp().IsZero() && !reflect.DeepEqual(finalizers, postgresWriterObject.GetFinalizers()) {
 		// set the finalizers of the postgresWriterObject to the rightful ones
@@ -75,15 +75,21 @@ func (r *PostgresWriterReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// if the metadata.deletionTimestamp is found to be non-zero, this means that the resource is intended and just about to be deleted
 	// hence, it's time to clean up the finalizers
 	if !postgresWriterObject.GetDeletionTimestamp().IsZero() {
-		if err := r.cleanupRowFinalizerCallback(ctx, postgresWriterObject); err != nil {
+		logger.Info("Deletion detected! Proceeding to cleanup the finalizers...")
+		if err := r.cleanupRowFinalizerCallback(ctx, logger, postgresWriterObject); err != nil {
 			logger.Error(err, "error occurred while dealing with the cleanup-row finalizer")
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 
-	return ctrl.Result{}, nil
+	// sync the resource to the DB - Insert the row if the row doesn't exist in the DB, Update the row if it exists in the DB
+	if err := r.synchronizeResourceToDB(logger, *postgresWriterObject); err != nil {
+		logger.Error(err, "error occurred while syncing the resource to the DB")
+		return ctrl.Result{}, err
+	}
 
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -93,8 +99,18 @@ func (r *PostgresWriterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+func (r *PostgresWriterReconciler) synchronizeResourceToDB(logger logr.Logger, postgresWriterObject demov1.PostgresWriter) error {
+	id := postgresWriterObject.Namespace + "/" + postgresWriterObject.Name
+	table, name, age, country := postgresWriterObject.Spec.Table, postgresWriterObject.Spec.Name, postgresWriterObject.Spec.Age, postgresWriterObject.Spec.Country
 
-func (r *PostgresWriterReconciler) cleanupRowFinalizerCallback(ctx context.Context, postgresWriterObject *demov1.PostgresWriter) error  {
+	if err := r.PostgresDBClient.Insert(id, table, name, age, country); err != nil {
+		return fmt.Errorf("error occurred while writing the row to Postgres DB: %w", err)
+	}
+	logger.Info(fmt.Sprintf("sychronized the resource %s/%s with the DB successfully", postgresWriterObject.Namespace, postgresWriterObject.Name))
+	return nil
+}
+
+func (r *PostgresWriterReconciler) cleanupRowFinalizerCallback(ctx context.Context, logger logr.Logger, postgresWriterObject *demov1.PostgresWriter) error {
 	// parse the table and the id of the row to delete
 	id := postgresWriterObject.Namespace + "/" + postgresWriterObject.Name
 	table := postgresWriterObject.Spec.Table
@@ -109,5 +125,6 @@ func (r *PostgresWriterReconciler) cleanupRowFinalizerCallback(ctx context.Conte
 	if err := r.Update(ctx, postgresWriterObject); err != nil {
 		return fmt.Errorf("error occurred while removing the finalizer: %w", err)
 	}
+	logger.Info("cleaned up the 'finalizers.postgreswriters.demo.yash.com/cleanup-row' finalizer successfully")
 	return nil
 }

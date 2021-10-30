@@ -58,13 +58,13 @@ func (pc *PostgresDBClient) setupAndReturnDbConnection() (*sql.DB, error) {
 	return pc.DbConnection, nil
 }
 
-// Insert inserts a row into the DB to which the receiver PostgresDBClient poins
+// Insert inserts a row (or updates on conflict) into the DB to which the receiver PostgresDBClient points
 func (pc *PostgresDBClient) Insert(id, table, name string, age int, country string) error {
 	dbConnection, err := pc.setupAndReturnDbConnection()
 	if err != nil {
 		return err
 	}
-	insertQuery := fmt.Sprintf("INSERT INTO %s (id, name, age, country) VALUES ('%s', '%s', %d, '%s') ON CONFLICT (id) DO NOTHING;", table, id, name, age, country)
+	insertQuery := fmt.Sprintf("INSERT INTO %s (id, name, age, country) VALUES ('%s', '%s', %d, '%s') ON CONFLICT (id) DO UPDATE SET name='%s',age=%d,country='%s';", table, id, name, age, country, name, age, country)
 	if _, err := dbConnection.Exec(insertQuery); err != nil {
 		return err
 	}
