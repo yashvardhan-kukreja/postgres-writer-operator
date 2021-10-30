@@ -1,0 +1,16 @@
+domain: yash.com
+layout:
+- go.kubebuilder.io/v3
+projectName: postgres-writer-operator
+repo: github.com/yashvardhan-kukreja/postgres-writer-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: yash.com
+  group: demo
+  kind: PostgresWriter
+  path: github.com/yashvardhan-kukreja/postgres-writer-operator/api/v1
+  version: v1
+version: "3"

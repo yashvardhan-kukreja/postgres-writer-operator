@@ -1,0 +1,24 @@
+# permissions for end users to edit postgreswriters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: postgreswriter-editor-role
+rules:
+- apiGroups:
+  - demo.yash.com
+  resources:
+  - postgreswriters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - demo.yash.com
+  resources:
+  - postgreswriters/status
+  verbs:
+  - get

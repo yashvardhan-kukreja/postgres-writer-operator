@@ -1,0 +1,20 @@
+# permissions for end users to view postgreswriters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: postgreswriter-viewer-role
+rules:
+- apiGroups:
+  - demo.yash.com
+  resources:
+  - postgreswriters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - demo.yash.com
+  resources:
+  - postgreswriters/status
+  verbs:
+  - get

@@ -1,0 +1,10 @@
+apiVersion: demo.yash.com/v1
+kind: PostgresWriter
+metadata:
+  name: sample-student
+  namespace: default
+spec:
+  table: students
+  name: alex
+  age: 23
+  country: canada
